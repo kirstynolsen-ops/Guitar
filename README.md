@@ -1,45 +1,51 @@
 # Guitar Studio
 
-A first prototype for a high school guitar classroom, optimized for Chromebooks.
+A high school guitar classroom app with class repertoire, rhythm practice, click tracks, chord diagrams and browser-saved student journals.
 
 ## Run
 
-Requires Node.js 22 or newer. No external packages or install step are needed.
+Node.js **22.13 or newer** is required.
 
 ```sh
+npm ci
 npm start
 ```
 
-The server listens on port 3000 (override with `PORT`). Run `npm test` for the HTTP smoke test.
+The server listens on port 3000 (`PORT` overrides it). `npm test` runs server, rhythm, authentication and upload/storage integration tests. Google is replaced by a test double in authentication tests; those tests do not establish live Google OAuth readiness.
 
-## Included
+No Google credentials are needed to browse the app locally. Unconfigured teacher sign-in and uploads stay disabled. Configure the variables in `.env.example` through your hosting service (the app does not automatically read `.env`). See [Render and Google setup](DEPLOYMENT.md) for live activation.
 
-- Searchable repertoire with resource links and progress status
-- Eight accessible open-chord diagrams
-- Practice goals, minutes, reflections, and downloadable journal
-- Local teacher assignment planning
-- Responsive student dashboard
+## Teacher music management
 
-All data is stored in this browser's localStorage. School browser clearing policies can remove it; download journals to retain a copy. The teacher workspace is a demonstration without authentication, not a private teacher area. Assignments and logs do not sync across browsers or devices. Initial repertoire entries are original classroom exercises, not licensed song charts.
+Approved teachers sign in directly with Google, without Clever. Upload up to 20 PDF/PNG/JPEG files per batch, with a shared class, skill group, skill tags and Working on now flag. Each file becomes a separate piece, named from its filename. PDFs can have up to 10 pages and each input file can be up to 12 MB. PDF.js renders previews in the teacher's browser; the original and page images are stored on the server. The teacher screen reports individual failures without discarding successful uploads.
 
-## Google accounts and classroom deployment
+Teachers can edit titles, class, skill group, skill tags and current focus. Each piece has a stable ID so editing metadata preserves student journal associations. Removing a piece removes it from the library and deletes uploaded files; students' existing local journal data is not erased. Original bundled PDFs remain in GitHub even if removed from the catalog.
 
-Google sign-in is not connected. A production version needs a hosted backend/database, Google OAuth client configuration, an authorized deployment URL, server-side token/session validation, teacher/student permissions, district approval for school Google accounts, and an agreed student-data retention policy. Do not collect student records with this unauthenticated demo. No Clever integration is required for direct Google sign-in.
+Only server-verified Google accounts on `TEACHER_EMAILS` can change the catalog or upload files. Sessions use HTTP-only, SameSite cookies, expire after eight hours, and require signing in again after a server restart. OAuth uses state bound to a browser cookie, PKCE, a nonce and server-side Google ID-token verification. Mutation endpoints check the request Origin. Files are checked by signature and stored under server-generated names. Files and the repertoire library are public; teacher access controls editing, not student access to music.
 
-## Class repertoire library
+## Storage and hosting
 
-The class library includes **Notes on the First String**, its supplied PDF, and an adjustable click track. Each piece opens a journal for strings, starting fret, independent practice, click-track progress, and reflections. Saving appends a dated entry; reopening restores the latest answers. Students can download the piece's journal as text. Existing personal songs and practice logs are preserved. Journals remain browser-local, without cross-device or teacher synchronization.
+`DATA_DIR` contains `catalog.json` plus uploaded originals and image previews. **Mount it on a persistent disk before uploading on Render.** Otherwise a redeploy can erase music. There is intentionally no upload option without an explicit `DATA_DIR`. The catalog is initialized from `music-library.json` on first use, and then retained on disk; editing bundled metadata in code will not overwrite later teacher changes. Writes are serialized and the catalog is replaced atomically. Use one application instance with this filesystem-based store. Back up the entire directory, not just the catalog.
 
-## Rhythm practice
+For local development, browsing uses an ignored `.local-data` directory; to test uploads explicitly set `DATA_DIR` to a local directory along with the OAuth variables. Do not commit data, `.env` files, credentials or real account records.
 
-Two-measure 4/4 patterns use whole, half, quarter, and paired eighth notes with no rests. Includes a four-beat count-in, 40–160 BPM tempo control, a steady metronome, optional rhythm example, beat/note highlighting, and new pattern generation. Audio is generated locally with Web Audio after Start is clicked; playback stops when navigating away or hiding the tab. This activity does not record or assess student playing. `npm test` checks measure totals and paired-eighth attack timing as well as the HTTP server.
+## Student tools
 
-Sheet music displays inline as a high-resolution PNG rendered from the supplied PDF, with an accessible enlargement dialog and a separate PDF download. The original notation is preserved. To regenerate this piece's image with Poppler: `pdftoppm -scale-to 2400 -png -singlefile music/notes-on-the-first-string.pdf music/notes-on-the-first-string`.
+- Beginning, Intermediate and Advanced Guitar libraries, each with current pieces and skill groups
+- Search and progress filters; inline music, enlarged score view and original download
+- Per-piece journal: strings, starting fret, independent practice, click-track readiness and dated reflections
+- Click track at 40–180 BPM with a stronger first beat, stopping on navigation or tab hiding
+- Rhythm practice: whole, half, quarter and paired eighth notes, no rests; four-beat count-in, 40–160 BPM and optional example
+- Chord diagrams, personal practice logs and journal downloads
 
-The repertoire click track uses local Web Audio at 40–180 BPM, with an accented first beat in 4/4 and visual beat indicators. Stop playback to change tempo. Navigation and tab hiding stop the click.
+**Student sign-in and cloud journal synchronization are not implemented.** Student work remains in localStorage in that browser and can be removed by school browser-clearing policies. Students should download copies. Teacher authentication does not make students' journals available to the teacher, or connect accounts across devices. The app does not record or grade playing.
 
-The class repertoire is organized into Working on now and a full library in teaching order: Single-string notes, Combining strings, Chords and strumming, and Ensemble pieces. Piece metadata in `classMusic` defines the category, skill tags and current class focus (`current`). Search matches titles and skills; All music, Practicing and Confident filters use the student's saved journal stage. Students choose their progress stage in the piece journal and save it with their reflection. Older journals without a stage derive an initial stage from their existing independent/click-track readiness. Personal songs remain available in the expandable Personal practice repertoire section. Empty skill groups are placeholders for future real music, not sample pieces. Class focus is currently maintained in code, not a shared teacher editing interface.
+## Adding bundled music in code
 
-Choose Beginning Guitar, Intermediate Guitar or Advanced Guitar at the top of the repertoire page. Each class has its own current pieces and skill groups, with shared search/progress filters. Piece metadata uses `level: 'beginning'`, `'intermediate'` or `'advanced'`. Notes on the First String belongs to Beginning Guitar; the other two libraries start empty and are ready for supplied music. These are library sections, not account-enforced class enrollments.
+Existing scores are served from `music/`. To render a PDF with Poppler:
 
-Intermediate Guitar includes the supplied Jingle Bells Guitar 1 and Guitar 2 scores under Ensemble pieces and Working on now. Each part has its own inline image, PDF download, click track and independent journal storage key. Assets are served through explicit routes.
+```sh
+pdftoppm -scale-to 2400 -png -singlefile music/example.pdf music/example
+```
+
+New music should normally be added through the authenticated teacher upload screen after live setup is complete.
