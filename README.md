@@ -25,3 +25,7 @@ All data is stored in this browser's localStorage. School browser clearing polic
 ## Google accounts and classroom deployment
 
 Google sign-in is not connected. A production version needs a hosted backend/database, Google OAuth client configuration, an authorized deployment URL, server-side token/session validation, teacher/student permissions, district approval for school Google accounts, and an agreed student-data retention policy. Do not collect student records with this unauthenticated demo. No Clever integration is required for direct Google sign-in.
+
+## Class repertoire library
+
+The class library includes **Notes on the First String**, its supplied PDF, and the Guitar in the Classroom play-along collection link. Each piece opens a journal for strings, starting fret, independent practice, backing-track progress, and reflections. Saving appends a dated entry; reopening restores the latest answers. Students can download the piece's journal as text. Existing personal songs and practice logs are preserved. Journals remain browser-local, without cross-device or teacher synchronization.

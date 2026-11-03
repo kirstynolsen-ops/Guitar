@@ -3,10 +3,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const root = __dirname;
 const server = http.createServer((req,res) => {
-  const files = {'/':'index.html','/app.js':'app.js','/style.css':'style.css'};
+  const files = {'/':'index.html','/app.js':'app.js','/style.css':'style.css','/music/notes-on-the-first-string.pdf':'music/notes-on-the-first-string.pdf'};
   const file = files[new URL(req.url,'http://localhost').pathname];
   if (!file) {res.writeHead(404);res.end('Not found');return;}
-  res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html');
+  res.setHeader('Content-Type',file.endsWith('.pdf')?'application/pdf':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html');
   res.setHeader('X-Content-Type-Options','nosniff');
   fs.createReadStream(path.join(root,file)).pipe(res);
 });
