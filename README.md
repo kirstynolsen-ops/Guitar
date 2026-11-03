@@ -33,3 +33,5 @@ The class library includes **Notes on the First String**, its supplied PDF, and 
 ## Rhythm practice
 
 Two-measure 4/4 patterns use whole, half, quarter, and paired eighth notes with no rests. Includes a four-beat count-in, 40–160 BPM tempo control, a steady metronome, optional rhythm example, beat/note highlighting, and new pattern generation. Audio is generated locally with Web Audio after Start is clicked; playback stops when navigating away or hiding the tab. This activity does not record or assess student playing. `npm test` checks measure totals and paired-eighth attack timing as well as the HTTP server.
+
+Sheet music displays inline as a high-resolution PNG rendered from the supplied PDF, with an accessible enlargement dialog and a separate PDF download. The original notation is preserved. To regenerate this piece's image with Poppler: `pdftoppm -scale-to 2400 -png -singlefile music/notes-on-the-first-string.pdf music/notes-on-the-first-string`.
