@@ -1,58 +1,78 @@
-# Activate teacher uploads on Render
+# Activate teacher sign-in and Google Drive storage
 
-Keep the existing Render web service. Google Sites alone cannot run the private teacher-upload backend. No Google Cloud billing account or paid Google API is required just for OAuth sign-in; district Google administration can still restrict OAuth clients. Persistent disk pricing is separate from the Render web-service price: check the displayed total before adding a disk.
+Keep the existing Render web service. **A Render persistent disk is not required when using Drive.** Google Drive stores originals, inline preview images, and the library catalog. Render still runs the app, handles sign-in and serves the published music. Drive space and API quotas still apply; check your school account's restrictions.
 
-## 1. Add permanent storage
+## 1. Create the Google connection
 
-In the existing Render service, open **Disks** and add a persistent disk mounted at `/var/data`. Choose a size appropriate to your music library (a small initial disk can be expanded later). In **Environment**, add:
+In [Google Cloud Console](https://console.cloud.google.com/), create or select a project. Enable **Google Drive API** in that project. Google OAuth and Drive API access do not require a paid API subscription for this workflow, but your school may restrict projects, consent or Drive storage.
 
-| Name | Value |
-| --- | --- |
-| `DATA_DIR` | `/var/data/guitar-studio` |
-| `APP_URL` | The exact live HTTPS site origin, with no path, e.g. `https://your-service.onrender.com` |
-| `TEACHER_EMAILS` | Your Google email; use commas if approving additional teachers |
+Open **Google Auth Platform** (or **APIs & Services → OAuth consent screen**). Configure the app name, contact email and audience. An **Internal** app can suit a school organization if its administrator permits it. For an **External** app in Testing, add the teacher email as a test user. Google refresh tokens for external testing apps requesting Drive access generally expire after seven days, so a lasting connection needs an appropriate Internal or Production configuration. A district administrator may need to approve the app.
 
-Only set `DATA_DIR` to this path after attaching the disk. A folder with that name on an ephemeral filesystem is not durable storage. Keep one service instance with this filesystem backend. Do not switch back to an instance type that loses the disk.
+The app requests basic `openid` and `email` at sign-in. Connecting Drive additionally requests `https://www.googleapis.com/auth/drive.file`, which limits access to files created by this app or explicitly chosen in Google's file picker. It does not request full-Drive access, Gmail, or Classroom permissions.
 
-Make sure the service uses Node 22.13 or newer. Build command: `npm ci`. Start command: `npm start`.
-
-## 2. Create a Google sign-in client
-
-In [Google Cloud Console](https://console.cloud.google.com/), create or choose a project. Open **Google Auth Platform** (or **APIs & Services → OAuth consent screen**).
-
-Configure the app name, contact email and audience. If your school permits an **Internal** app, that can suit accounts in the school organization. If using an **External** app in Testing, add your teacher Google email as a test user. Request only the basic `openid` and `email` scopes. This app does not need access to Drive, Gmail or students' Google Classroom data.
-
-Create an OAuth client with application type **Web application**. Add this authorized redirect URI, substituting the actual site address exactly:
+Create an OAuth client with application type **Web application**. Add the exact live callback URL to its authorized redirect URIs. For this deployment:
 
 ```text
-https://your-service.onrender.com/auth/google/callback
+https://guitarclass101.onrender.com/auth/google/callback
 ```
 
-A client secret is produced. Keep it private. Do not paste it into chat, a GitHub file or browser code.
+Keep the client secret private. Do not send it in chat or commit it to GitHub. Do not substitute a service-account key for this OAuth client.
 
-If your school blocks creating Cloud projects or approving OAuth apps, ask the district Google administrator to create/approve this client. There is no need to connect Clever.
+## 2. Add the initial settings in Render
 
-## 3. Add the Google client to Render
-
-In the Render service's **Environment**, add:
+In the existing Render service's **Environment**, set:
 
 | Name | Value |
 | --- | --- |
-| `GOOGLE_CLIENT_ID` | The OAuth web application's client ID |
-| `GOOGLE_CLIENT_SECRET` | Its client secret, entered privately in Render |
+| `APP_URL` | `https://guitarclass101.onrender.com` |
+| `TEACHER_EMAILS` | The approved teacher Google email; comma-separated for more than one |
+| `GOOGLE_CLIENT_ID` | The OAuth web client's ID |
+| `GOOGLE_CLIENT_SECRET` | Its secret, entered privately in Render |
+| `STORAGE_PROVIDER` | `drive` |
 
-Save and redeploy. The app only enables Google sign-in when `APP_URL`, both client settings and at least one teacher email are present. Uploads also require `DATA_DIR`. Do not use a Google service-account key: it cannot replace this OAuth client.
+Node must be 22.13 or newer. Build command: `npm ci`. Start command: `npm start`. Save and redeploy. Teacher sign-in stays disabled until its settings are present. A configured variable does not prove that Google or the district permits the operation.
 
-## 4. Verify live operation
+## 3. Connect the music folder
 
-1. Open **Teacher workspace** and click **Sign in with Google**.
-2. Sign in with the approved teacher account. An account not on the teacher list must be refused.
-3. Upload one test piece. Select its class and skill group. Check inline preview pages and original download from a separate, signed-out browser.
-4. Restart/redeploy the Render service. Sign in again and confirm the piece and its files still exist.
-5. Test a small batch. Edit a title and Working on now status and confirm they update in the student library after refresh.
+1. Open the app's **Teacher workspace** and sign in with the approved Google account.
+2. Choose **Connect Google Drive** and approve the additional Drive permission.
+3. Choose **Set up music folder**. The app creates a dedicated **Guitar Studio Music** folder and seeds its library catalog with the existing repertoire. It does not copy or modify unrelated Drive files.
+4. Choose **Download private connection file**. This file contains a refresh credential: keep it private, do not attach it in chat or upload it to GitHub.
+5. In Render's **Environment**, use its `.env` import feature (if available), or enter the file's three settings privately: `STORAGE_PROVIDER`, `GOOGLE_DRIVE_FOLDER_ID`, and `GOOGLE_DRIVE_REFRESH_TOKEN`.
+6. Save and redeploy, then delete your local copy of the private connection file. Sign in again after restart.
 
-Only steps tested on the real service establish live readiness. Local tests use a mocked Google provider and a local filesystem; they cannot verify Google client configuration, district approval or the Render disk mount.
+Finish exporting the connection before restarting the app: the initial connection exists only in its temporary teacher session until saved in Render. Uploads remain disabled until the saved Drive connection is configured. The refresh token stays server-side after configuration. The app never puts it in the public catalog, page source, localStorage or logs. Its protected download is intentionally available only to a signed-in approved teacher, with same-origin checks and no caching.
 
-## Backups and limits
+If reconnecting an existing configured folder, the app verifies access to that folder and preserves it instead of creating a new catalog. Use the same Drive account that owns the music connection. Do not delete the configured folder or its **Guitar Studio Library.json** file.
 
-Back up all of `DATA_DIR` before deleting music or changing storage configuration, and use Render's available disk backup/snapshot facilities according to your plan. A GitHub code backup does not include uploaded files. Monitor disk space as your library grows; uploads fail if storage is full. PDFs are limited to 10 pages, originals to 12 MB, and a batch to 20 files. Multi-part scores can be split into separate PDF files. Music is publicly readable from the site; student journal data is not sent to this server.
+## 4. Import music already in Drive (file picker)
+
+Ordinary uploads from a Chromebook already work once Drive storage is connected. To browse existing Drive files from the app:
+
+1. Enable **Google Picker API** in the same Cloud project.
+2. Create a browser API key. Restrict it to Google Picker API and the actual website's HTTP referrer, e.g. `https://guitarclass101.onrender.com/*`.
+3. Set `GOOGLE_PICKER_API_KEY` to that key and `GOOGLE_PROJECT_NUMBER` to the numeric project number in Render. The project number is not the project name or OAuth client ID. Save and redeploy.
+4. In Teacher workspace, choose the desired class/skill group and select **Choose music from Google Drive**. The picker begins in the music folder; choose the files to import.
+
+The picker grants the app access to the selected files under `drive.file`. Merely dropping an arbitrary file into a folder does not grant this scope access to it. **New files are not automatically published**: explicitly select and import them so the app can create inline previews and library metadata. Imported originals are copied into the app-managed library; the selected source files are not changed or deleted. Importing a file twice creates two pieces. A teacher-only picker receives a short-lived app-scoped access token; refresh credentials are never exposed to it.
+
+## 5. Verify the live setup
+
+1. Upload one test PDF, confirm all inline pages and its original download, and check the library from a signed-out browser.
+2. Restart/redeploy Render; sign in again and verify that the test piece remains available.
+3. Try a small batch and a Drive-picker import, and edit Working on now.
+4. Confirm that an unapproved Google account cannot sign in as a teacher.
+
+Local automated tests use fake Google/Drive services and real browser PDF conversion. They cannot verify real OAuth approval, API enablement, picker configuration, token lifetime or school storage policies. These live checks remain required.
+
+## Storage behavior and recovery
+
+The catalog and uploaded music live in the Drive folder. Keep a backup/export of that folder and its catalog; GitHub backs up code, not these uploads. Use one app instance to serialize catalog edits. Removing a Drive-backed piece **unpublishes it from the app but leaves its Drive files as a recoverable archive**. Removing an original or preview manually in Drive can break a published score; replacing an original does not regenerate its previews automatically. Re-import a changed score and remove the old library entry when ready.
+
+If Drive is temporarily unavailable or a credential expires, the app reports the problem rather than overwriting the Drive catalog with an empty library. Reconnect in Teacher workspace, export the renewed connection, and save it privately in Render. Student journals are separate browser-local data and are not stored in Drive by this change.
+
+PDFs are limited to 10 pages, originals to 12 MB and batches to 20 files. Students do not need Drive access or accounts to read published scores: the backend serves catalog-approved music. Use only material intended for the public classroom site.
+
+## Alternative: Render disk
+
+Filesystem storage remains available by explicitly setting `STORAGE_PROVIDER=disk` and `DATA_DIR=/var/data/guitar-studio` after mounting a persistent Render disk at `/var/data`. This has a separate storage cost. Back up the whole directory. Switching an already-used disk library to Drive does not automatically migrate disk uploads: arrange a migration before changing providers. The three bundled scores are seeded in a new Drive catalog automatically.

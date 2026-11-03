@@ -13,21 +13,25 @@ npm start
 
 The server listens on port 3000 (`PORT` overrides it). `npm test` runs server, rhythm, authentication and upload/storage integration tests. Google is replaced by a test double in authentication tests; those tests do not establish live Google OAuth readiness.
 
-No Google credentials are needed to browse the app locally. Unconfigured teacher sign-in and uploads stay disabled. Configure the variables in `.env.example` through your hosting service (the app does not automatically read `.env`). See [Render and Google setup](DEPLOYMENT.md) for live activation.
+No Google credentials are needed to browse the app locally. Unconfigured teacher sign-in and uploads stay disabled. Configure the variables in `.env.example` through your hosting service (the app does not automatically read `.env`). See [Google Drive and Render setup](DEPLOYMENT.md) for live activation.
 
 ## Teacher music management
 
 Approved teachers sign in directly with Google, without Clever. Upload up to 20 PDF/PNG/JPEG files per batch, with a shared class, skill group, skill tags and Working on now flag. Each file becomes a separate piece, named from its filename. PDFs can have up to 10 pages and each input file can be up to 12 MB. PDF.js renders previews in the teacher's browser; the original and page images are stored on the server. The teacher screen reports individual failures without discarding successful uploads.
 
-Teachers can edit titles, class, skill group, skill tags and current focus. Each piece has a stable ID so editing metadata preserves student journal associations. Removing a piece removes it from the library and deletes uploaded files; students' existing local journal data is not erased. Original bundled PDFs remain in GitHub even if removed from the catalog.
+Teachers can edit titles, class, skill group, skill tags and current focus. Each piece has a stable ID so editing metadata preserves student journal associations. Removing a piece removes it from the library (Drive assets are retained as an archive; disk assets are deleted); students' existing local journal data is not erased. Original bundled PDFs remain in GitHub even if removed from the catalog.
 
 Only server-verified Google accounts on `TEACHER_EMAILS` can change the catalog or upload files. Sessions use HTTP-only, SameSite cookies, expire after eight hours, and require signing in again after a server restart. OAuth uses state bound to a browser cookie, PKCE, a nonce and server-side Google ID-token verification. Mutation endpoints check the request Origin. Files are checked by signature and stored under server-generated names. Files and the repertoire library are public; teacher access controls editing, not student access to music.
 
 ## Storage and hosting
 
-`DATA_DIR` contains `catalog.json` plus uploaded originals and image previews. **Mount it on a persistent disk before uploading on Render.** Otherwise a redeploy can erase music. There is intentionally no upload option without an explicit `DATA_DIR`. The catalog is initialized from `music-library.json` on first use, and then retained on disk; editing bundled metadata in code will not overwrite later teacher changes. Writes are serialized and the catalog is replaced atomically. Use one application instance with this filesystem-based store. Back up the entire directory, not just the catalog.
+**Google Drive is the default storage provider.** It stores the library catalog, uploaded originals and inline preview images in one app-managed folder, so no Render disk is needed. Render still runs the site. Connect Google Drive from the teacher workspace, then privately save the exported folder ID and refresh credential in Render's environment. Uploads stay disabled until durable connection settings are present. Tokens are not stored in Drive or committed to code.
 
-For local development, browsing uses an ignored `.local-data` directory; to test uploads explicitly set `DATA_DIR` to a local directory along with the OAuth variables. Do not commit data, `.env` files, credentials or real account records.
+The app uses `drive.file`: only app-created files and files explicitly selected in Google's picker are accessible. Teachers can upload files from their computer or import selected Drive files (requires the Picker API key and project number). Importing creates a separate published copy and previews; simply placing a file in the Drive folder does not publish it. Students do not need access to the folder. Removing a Drive-backed entry unpublishes it and keeps its Drive files as an archive. Do not manually delete the catalog or files that published scores use.
+
+Google access is verified server-side; the backend serves only assets registered in the catalog. Catalog writes are serialized within one app instance. Drive failures do not fall back to publishing an empty replacement catalog. Local tests use an in-memory Drive double and do not establish live Google readiness. See DEPLOYMENT.md for consent, token expiry, school approval, setup and backup details.
+
+The optional filesystem provider uses `STORAGE_PROVIDER=disk` and a persistent `DATA_DIR`. Browsing without configured storage uses an ignored local seed catalog; uploads and catalog mutations remain disabled. An existing disk library is not automatically migrated when switching to Drive. Back up data before changing providers.
 
 ## Student tools
 

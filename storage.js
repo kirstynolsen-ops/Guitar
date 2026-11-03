@@ -29,4 +29,4 @@ async function createStore(directory,seed=[]){
  file(id,name){const piece=pieces.find(p=>p.id===id);if(!piece)return null;const url=`/uploads/${id}/${name}`;if(![piece.source,...(piece.images||[])].includes(url))return null;return path.join(directory,id,name);}
  };
 }
-module.exports={createStore,metadata};
+module.exports={createStore,metadata,identify};
