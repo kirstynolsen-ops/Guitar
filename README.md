@@ -53,3 +53,7 @@ pdftoppm -scale-to 2400 -png -singlefile music/example.pdf music/example
 ```
 
 New music should normally be added through the authenticated teacher upload screen after live setup is complete.
+
+## Tab and notation practice
+
+Students can practice tab to staff, staff to tab, or both directions, selecting any of the six strings. Questions use natural notes in first position (frets 0–3), unique pitch choices, guitar's octave-transposed treble clef, and appropriate ledger lines. Feedback connects the correct note name with string and fret. The session score resets when changing strings or direction and is not saved as a student record. Unit tests check every pitch against standard tuning and verify question choices; browser checks cover both directions, scoring and responsive layout.
