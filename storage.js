@@ -2,18 +2,20 @@ const fs=require('node:fs/promises');
 const path=require('node:path');
 const crypto=require('node:crypto');
 const levels=['beginning','intermediate','advanced'];
-const categories=['single','combining','chords','ensemble'];
+const {normalizePiece,validCategory}=require('./repertoire-config');
 function metadata(body){
  if(typeof body.title!=='string'||!body.title.trim()||body.title.length>120)throw Error('Enter a title of 1–120 characters.');
- if(!levels.includes(body.level)||!categories.includes(body.category))throw Error('Choose a class and skill group.');
+ const normalized=normalizePiece(body);
+ if(!levels.includes(body.level)||!validCategory(body.level,normalized.category))throw Error('Choose a class and skill group.');
  if(typeof body.skills!=='string'||body.skills.length>300)throw Error('Keep skill tags under 300 characters.');
- return {title:body.title.trim(),level:body.level,category:body.category,skills:body.skills.split(',').map(s=>s.trim()).filter(Boolean).slice(0,10),current:body.current==='true'};
+ return {title:body.title.trim(),level:body.level,category:normalized.category,skills:body.skills.split(',').map(s=>s.trim()).filter(Boolean).slice(0,10),current:body.current==='true'};
 }
 async function identify(file){const handle=await fs.open(file.path,'r');try{const b=Buffer.alloc(12);await handle.read(b,0,12,0);if(b.subarray(0,5).toString()==='%PDF-')return 'pdf';if(b.subarray(0,8).toString('hex')==='89504e470d0a1a0a')return 'png';if(b.subarray(0,3).toString('hex')==='ffd8ff')return 'jpg';throw Error('Only PDF, PNG and JPEG music files are supported.');}finally{await handle.close();}}
 async function createStore(directory,seed=[]){
  await fs.mkdir(directory,{recursive:true,mode:0o700});
  const catalogPath=path.join(directory,'catalog.json');let pieces=[];
  try{pieces=JSON.parse(await fs.readFile(catalogPath,'utf8'));if(!Array.isArray(pieces))throw Error('Invalid catalog');}catch(e){if(e.code!=='ENOENT')throw e;pieces=structuredClone(seed);await fs.writeFile(catalogPath,JSON.stringify(pieces,null,2),{mode:0o600});}
+ pieces=pieces.map(normalizePiece);
  let queue=Promise.resolve();
  function mutate(change){const task=queue.then(async()=>{const updated=change(pieces);const temp=catalogPath+'.'+crypto.randomUUID()+'.tmp';try{await fs.writeFile(temp,JSON.stringify(updated,null,2),{mode:0o600});await fs.rename(temp,catalogPath);}catch(e){await fs.rm(temp,{force:true});throw e;}pieces=updated;return pieces;});queue=task.catch(()=>{});return task;}
  return {directory,list:()=>structuredClone(pieces),

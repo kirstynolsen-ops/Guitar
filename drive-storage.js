@@ -2,6 +2,7 @@ const crypto=require('node:crypto');
 const fs=require('node:fs/promises');
 const {OAuth2Client}=require('google-auth-library');
 const {metadata,identify}=require('./storage');
+const {normalizePiece}=require('./repertoire-config');
 const FOLDER='application/vnd.google-apps.folder';
 function driveClient(env){
  const auth=new OAuth2Client(env.GOOGLE_CLIENT_ID,env.GOOGLE_CLIENT_SECRET);
@@ -34,7 +35,7 @@ function createDriveStore(client,folderId,seed){
  if(!/^[a-zA-Z0-9_-]+$/.test(folderId))throw Error('Invalid Drive folder ID.');
  let catalogId=null,cache=null,cacheUntil=0,queue=Promise.resolve();
  async function load(force=false){if(!force&&cache&&Date.now()<cacheUntil)return structuredClone(cache);if(!catalogId){const info=await client.info(folderId);if(info.trashed||info.mimeType!==FOLDER)throw Error('The Drive music folder is unavailable.');const candidates=await client.list(`'${folderId}' in parents and trashed = false and appProperties has { key='guitarStudio' and value='catalog' }`);if(candidates.length!==1)throw Error('The Drive library catalog is missing or ambiguous. Reconnect the original folder.');catalogId=candidates[0].id;}
- const items=JSON.parse((await client.read(catalogId)).toString());validateCatalog(items);cache=items;cacheUntil=Date.now()+30000;return structuredClone(cache);}
+ const raw=JSON.parse((await client.read(catalogId)).toString());validateCatalog(raw);const items=raw.map(normalizePiece);cache=items;cacheUntil=Date.now()+30000;return structuredClone(cache);}
  function mutate(change){const task=queue.then(async()=>{const items=await load(true),updated=change(items);await client.replace(catalogId,Buffer.from(JSON.stringify(updated,null,2)));cache=updated;cacheUntil=Date.now()+30000;return structuredClone(updated);});queue=task.catch(()=>{});return task;}
  const publicPiece=piece=>{const {driveFiles,...rest}=piece;return rest;};
  return {

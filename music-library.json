@@ -1,1 +1,44 @@
-[{"id":"first-string","level":"beginning","category":"single","skills":["First string","Reading notes","Steady pulse"],"current":true,"title":"Notes on the First String","pdf":"/music/notes-on-the-first-string.pdf","image":"/music/notes-on-the-first-string.png"},{"id":"jingle-bells-guitar-1","level":"intermediate","category":"ensemble","skills":["Guitar 1","Reading notes","Ensemble playing"],"current":true,"title":"Jingle Bells Guitar 1","pdf":"/music/jingle-bells-guitar-1.pdf","image":"/music/jingle-bells-guitar-1.png"},{"id":"jingle-bells-guitar-2","level":"intermediate","category":"ensemble","skills":["Guitar 2","Reading notes","Ensemble playing"],"current":true,"title":"Jingle Bells Guitar 2","pdf":"/music/jingle-bells-guitar-2.pdf","image":"/music/jingle-bells-guitar-2.png"}]
+[
+  {
+    "id": "first-string",
+    "level": "beginning",
+    "category": "single",
+    "skills": [
+      "First string",
+      "Reading notes",
+      "Steady pulse"
+    ],
+    "current": true,
+    "title": "Notes on the First String",
+    "pdf": "/music/notes-on-the-first-string.pdf",
+    "image": "/music/notes-on-the-first-string.png"
+  },
+  {
+    "id": "jingle-bells-guitar-1",
+    "level": "intermediate",
+    "category": "holiday",
+    "skills": [
+      "Guitar 1",
+      "Reading notes",
+      "Ensemble playing"
+    ],
+    "current": true,
+    "title": "Jingle Bells Guitar 1",
+    "pdf": "/music/jingle-bells-guitar-1.pdf",
+    "image": "/music/jingle-bells-guitar-1.png"
+  },
+  {
+    "id": "jingle-bells-guitar-2",
+    "level": "intermediate",
+    "category": "holiday",
+    "skills": [
+      "Guitar 2",
+      "Reading notes",
+      "Ensemble playing"
+    ],
+    "current": true,
+    "title": "Jingle Bells Guitar 2",
+    "pdf": "/music/jingle-bells-guitar-2.pdf",
+    "image": "/music/jingle-bells-guitar-2.png"
+  }
+]

@@ -1,0 +1,8 @@
+(function(root){
+ const beginning=[{id:'single',title:'Single-string notes',description:'Build confidence reading and playing one string at a time.'},{id:'combining',title:'Combining strings',description:'Move between strings while keeping your place in the music.'},{id:'chords',title:'Chords and strumming',description:'Connect chord changes with a steady rhythm.'},{id:'ensemble',title:'Ensemble pieces',description:'Listen, keep time, and make music together.'}];
+ const upper=[{id:'aerobics',title:'Guitar Aerobics',description:'Build technique, coordination, and fluency.'},{id:'holiday',title:'Holiday Music',description:'Seasonal music to learn, share, and perform.'},{id:'duets',title:'Duets',description:'Two parts working together.'},{id:'trios',title:'Trios',description:'Three parts, one ensemble.'},{id:'quartets',title:'Quartets',description:'Four parts creating a shared sound.'},{id:'other',title:'Other Repertoire',description:'More music for your class to explore.'}];
+ function groupsForLevel(level){return level==='beginning'?beginning:upper;}
+ function normalizePiece(piece){if(piece.level==='beginning'||!beginning.some(g=>g.id===piece.category))return {...piece};let category=['single','combining','chords'].includes(piece.category)?'aerobics':'other';if(/jingle bells/i.test(piece.title))category='holiday';return {...piece,category};}
+ function validCategory(level,category){return groupsForLevel(level).some(g=>g.id===category);}
+ const config={groupsForLevel,normalizePiece,validCategory};if(typeof module!=='undefined')module.exports=config;else root.RepertoireConfig=config;
+})(typeof window==='undefined'?globalThis:window);
